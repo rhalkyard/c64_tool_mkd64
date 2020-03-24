@@ -61,6 +61,12 @@ separators
 This module provides an easy-to-use way to add separators and boxes to the
 directory, using PETSCII graphics. Use 'mkd64 -h separators' for details.
 
+bootblk
+-------
+
+This module allows the creation of disk images that will boot automatically on
+the C128.
+
 module API
 ==========
 
