@@ -29,6 +29,7 @@ struct DiskFile
     size_t size;
     size_t blocks;
     int interleave;
+    int raw;
 
     uint8_t *content;
 
@@ -165,6 +166,22 @@ DiskFile_blocks(const DiskFile *self)
 }
 
 SOEXPORT void
+DiskFile_setRaw(DiskFile *self, int raw)
+{
+    if (raw)
+    {
+        DiskFile_setInterleave(self, 1);
+    }
+    self->raw = !!raw;
+}
+
+SOEXPORT int
+DiskFile_raw(const DiskFile *self)
+{
+    return !!self->raw;
+}
+
+SOEXPORT void
 DiskFile_setInterleave(DiskFile *self, int interleave)
 {
     self->interleave = interleave;
@@ -222,6 +239,10 @@ DiskFile_write(DiskFile *self, Image *image,
     Block *block, *nextBlock;
     size_t blockWrite;
 
+    if (self->raw) {
+        DiskFile_setInterleave(self, 1);
+    }
+
     if (!toWrite)
     {
         start = &inval;
@@ -257,9 +278,17 @@ DiskFile_write(DiskFile *self, Image *image,
     do
     {
         block = nextBlock;
-        blockWrite = (toWrite > BLOCK_SIZE) ? BLOCK_SIZE : toWrite;
+        if (self->raw)
+        {
+            blockData = Block_rawData(block);
+            blockWrite = (toWrite > BLOCK_RAWSIZE) ? BLOCK_RAWSIZE : toWrite;
+        }
+        else
+        {
+            blockData = Block_data(block);
+            blockWrite = (toWrite > BLOCK_SIZE) ? BLOCK_SIZE : toWrite;
+        }
         toWrite -= blockWrite;
-        blockData = Block_data(block);
         DBGd2("writing file", current->track, current->sector);
         memcpy(blockData, contentPos, blockWrite);
         if (toWrite)
@@ -273,17 +302,23 @@ DiskFile_write(DiskFile *self, Image *image,
             }
             if (!nextBlock)
             {
-                Block_setNextTrack(block, 0);
+                if (!self->raw)
+                {
+                    Block_setNextTrack(block, 0);
+                }
                 _rollbackWrite(image, start);
                 return 0;
             }
             current = Block_position(nextBlock);
-            Block_setNextTrack(block, current->track);
-            Block_setNextSector(block, current->sector);
+            if (!self->raw)
+            {
+                Block_setNextTrack(block, current->track);
+                Block_setNextSector(block, current->sector);
+            }
             contentPos += blockWrite;
             ++(self->blocks);
         }
-        else
+        else if (!self->raw)
         {
             Block_setNextTrack(block, 0);
             Block_setNextSector(block, blockWrite + 1);

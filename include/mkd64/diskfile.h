@@ -63,6 +63,25 @@ DECLEXPORT size_t DiskFile_size(const DiskFile *self);
  */
 DECLEXPORT size_t DiskFile_blocks(const DiskFile *self);
 
+/** Set 'raw' mode for this file
+ * this causes the file to be written as raw blocks of 256 bytes each, without
+ * the 2-byte chaining header. A file written in this way will not be loadable
+ * by conventional DOS, but can, for example, be used to write a C128 boot
+ * disk. Note that setting raw mode implicitly sets an interleave of 1 for the
+ * file.
+ * @relates DiskFile
+ * @param self the diskfile
+ * @param raw zero for regular writing mode, nonzero for raw mode
+ */
+DECLEXPORT void DiskFile_setRaw(DiskFile *self, int raw);
+
+/** Get raw mode for this file.
+ * @relates DiskFile
+ * @param self the diskfile
+ * @return the currently set raw value
+ */
+DECLEXPORT int DiskFile_raw(const DiskFile *self);
+
 /** Set interleave for this file.
  * this sets an interleave value to be used when the file is written to a disk
  * image. Modules may use this to set a default when they are told to handle
